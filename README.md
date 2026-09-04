@@ -12,7 +12,7 @@ SwiftTrack is a robust, highly scalable middleware architecture prototype design
 
 This repository is built as a showcase of advanced distributed systems engineering. It emphasizes fault tolerance, asynchronous processing, and architectural decoupling, making it an ideal reference for enterprise-grade microservice design.
 
-![SwiftTrack Architecture Diagram](Assests/SwiftTrack%20Arch%20Diagram.png)
+![SwiftTrack Architecture Diagram](Assets/SwiftTrack%20Arch%20Diagram.png)
 
 ---
 
