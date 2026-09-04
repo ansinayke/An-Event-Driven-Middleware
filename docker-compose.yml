@@ -1,0 +1,204 @@
+services:
+
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    container_name: swifttrack-rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: swift
+      RABBITMQ_DEFAULT_PASS: swift
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  auth-db:
+    image: postgres:16
+    container_name: swifttrack-auth-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: authdb
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  order-db:
+    image: postgres:16
+    container_name: swifttrack-order-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: orderdb
+    volumes:
+      - order-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  auth-service:
+    build:
+      context: ./auth-service
+    container_name: swifttrack-auth
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@auth-db:5432/authdb
+      JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-key-change-in-production}
+      JWT_ALGORITHM: HS256
+      JWT_EXPIRE_MINUTES: 60
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health')\"" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./auth-service/app:/app/app
+
+  order-service:
+    build:
+      context: ./order-service
+    container_name: swifttrack-orders
+    ports:
+      - "8001:8001"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@order-db:5432/orderdb
+      JWT_SECRET: ${JWT_SECRET:-super-secret-jwt-key-change-in-production}
+      JWT_ALGORITHM: HS256
+      RABBITMQ_URL: amqp://swift:swift@rabbitmq:5672/
+      EXCHANGE_NAME: swifttrack.events
+    depends_on:
+      order-db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: [ "CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8001/health')\"" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./order-service/app:/app/app
+
+  cms-adapter:
+    build:
+      context: ./cms-adapter
+    container_name: swifttrack-cms
+    environment:
+      RABBITMQ_URL: amqp://swift:swift@rabbitmq:5672/
+      EXCHANGE_NAME: swifttrack.events
+      CMS_SOAP_URL: http://cms-mock:8020/soap/order
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      cms-mock:
+        condition: service_started
+    volumes:
+      - ./cms-adapter/app:/app/app
+
+  cms-mock:
+    build:
+      context: ./cms-mock
+    container_name: swifttrack-cms-mock
+    ports:
+      - "8020:8020"
+    volumes:
+      - ./cms-mock/app:/app/app
+
+
+  wms-adapter:
+    build:
+      context: ./wms-adapter
+    container_name: swifttrack-wms
+    environment:
+      RABBITMQ_URL: amqp://swift:swift@rabbitmq:5672/
+      EXCHANGE_NAME: swifttrack.events
+      WMS_TCP_HOST: wms-mock
+      WMS_TCP_PORT: 9000
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./wms-adapter/app:/app/app
+
+  wms-mock:
+    build:
+      context: ./wms-mock
+    container_name: swifttrack-wms-mock
+    ports:
+      - "9000:9000"
+    volumes:
+      - ./wms-mock/app:/app/app
+
+  ros-mock:
+    build:
+      context: ./ros-mock
+    container_name: swifttrack-ros-mock
+    ports:
+      - "8010:8010"
+    healthcheck:
+      test: [ "CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8010/health')\"" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    volumes:
+      - ./ros-mock/app:/app/app
+
+  ros-adapter:
+    build:
+      context: ./ros-adapter
+    container_name: swifttrack-ros
+    environment:
+      RABBITMQ_URL: amqp://swift:swift@rabbitmq:5672/
+      EXCHANGE_NAME: swifttrack.events
+      ROS_BASE_URL: http://ros-mock:8010
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      ros-mock:
+        condition: service_healthy
+    volumes:
+      - ./ros-adapter/app:/app/app
+
+  notification-service:
+    build:
+      context: ./notification-service
+    container_name: swifttrack-notifications
+    ports:
+      - "8003:8003"
+    environment:
+      RABBITMQ_URL: amqp://swift:swift@rabbitmq:5672/
+      EXCHANGE_NAME: swifttrack.events
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+    volumes:
+      - ./notification-service/app:/app/app
+
+  web-ui:
+    image: nginx:alpine
+    container_name: swifttrack-web
+    ports:
+      - "3000:80"
+    volumes:
+      - ./web:/usr/share/nginx/html
+
+volumes:
+  auth-db-data:
+  order-db-data:

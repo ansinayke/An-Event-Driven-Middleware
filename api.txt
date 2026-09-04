@@ -1,0 +1,406 @@
+# SwiftTrack API Documentation
+
+Base URLs:
+
+Auth Service
+
+```
+http://localhost:8001
+```
+
+Order Service
+
+```
+http://localhost:8000
+```
+
+All protected endpoints require:
+
+```
+Authorization: Bearer <JWT_TOKEN>
+```
+
+---
+
+# 1. Authentication Service API
+
+## 1.1 Register User
+
+**Endpoint**
+
+```
+POST /auth/register
+```
+
+**Description**
+Registers a new user.
+
+**Request Body**
+
+```json
+{
+  "username": "john_doe",
+  "password": "password123",
+  "role": "CLIENT"
+}
+```
+
+**Allowed Roles**
+
+* CLIENT
+* DRIVER
+
+**Response (201 Created)**
+
+```json
+{
+  "message": "User registered successfully"
+}
+```
+
+**Errors**
+
+* 400 Bad Request – Invalid role
+* 409 Conflict – Username already exists
+
+---
+
+## 1.2 Login
+
+**Endpoint**
+
+```
+POST /auth/login
+```
+
+**Description**
+Authenticates user and returns JWT.
+
+**Request Body**
+
+```json
+{
+  "username": "john_doe",
+  "password": "password123"
+}
+```
+
+**Response (200 OK)**
+
+```json
+{
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "token_type": "bearer"
+}
+```
+
+**Errors**
+
+* 401 Unauthorized – Invalid credentials
+
+---
+
+# 2. Order Service API
+
+All endpoints below require valid JWT.
+
+---
+
+## 2.1 Create Order
+
+**Endpoint**
+
+```
+POST /api/v1/orders
+```
+
+**Authorization Required**
+Role: CLIENT
+
+**Description**
+Creates a new delivery order.
+
+**Request Body**
+
+```json
+{
+  "pickup_address": "Colombo 03",
+  "delivery_address": "Kandy",
+  "package_weight": 2.5,
+  "priority": "NORMAL"
+}
+```
+
+**Response (201 Created)**
+
+```json
+{
+  "order_id": "ORD-12345678",
+  "status": "CREATED"
+}
+```
+
+**Errors**
+
+* 401 Unauthorized – Missing/invalid token
+* 403 Forbidden – Not CLIENT role
+* 400 Bad Request – Invalid input
+
+---
+
+## 2.2 Get Order Status
+
+**Endpoint**
+
+```
+GET /api/v1/orders/{order_id}
+```
+
+**Authorization Required**
+Role: CLIENT
+
+**Description**
+Returns order status and routing information.
+
+**Response (200 OK)**
+
+```json
+{
+  "order_id": "ORD-12345678",
+  "status": "ROUTE_ASSIGNED",
+  "driver_id": "DRV-01",
+  "route_id": "R-1001",
+  "estimated_delivery_time": "2026-03-01T14:00:00Z"
+}
+```
+
+**Errors**
+
+* 401 Unauthorized
+* 403 Forbidden
+* 404 Not Found
+
+---
+
+## 2.3 Driver Manifest
+
+**Endpoint**
+
+```
+GET /api/v1/drivers/{driver_id}/manifest
+```
+
+**Authorization Required**
+Role: DRIVER
+
+**Description**
+Returns assigned deliveries for driver.
+
+**Response (200 OK)**
+
+```json
+[
+  {
+    "order_id": "ORD-12345678",
+    "delivery_address": "Kandy",
+    "route_id": "R-1001",
+    "status": "ROUTE_ASSIGNED"
+  }
+]
+```
+
+**Errors**
+
+* 401 Unauthorized
+* 403 Forbidden
+
+---
+
+## 2.4 Complete Delivery
+
+**Endpoint**
+
+```
+POST /api/v1/drivers/{driver_id}/deliveries/{order_id}/complete
+```
+
+**Authorization Required**
+Role: DRIVER
+
+**Description**
+Marks delivery as completed.
+
+**Request Body**
+
+```json
+{
+  "proof_type": "PHOTO",
+  "proof_url": "https://storage.example.com/photo.jpg"
+}
+```
+
+**Response (200 OK)**
+
+```json
+{
+  "order_id": "ORD-12345678",
+  "status": "DELIVERED"
+}
+```
+
+**Errors**
+
+* 401 Unauthorized
+* 403 Forbidden
+* 404 Not Found
+
+---
+
+# 3. WebSocket API (Notification Service)
+
+## 3.1 Connect
+
+**Endpoint**
+
+```
+ws://localhost:8002/ws
+```
+
+**Authorization**
+JWT must be passed as query parameter:
+
+```
+ws://localhost:8002/ws?token=<JWT_TOKEN>
+```
+
+**Description**
+Pushes real-time updates when:
+
+* Route assigned
+* Order delivered
+* Order failed
+
+**Example Message**
+
+```json
+{
+  "event": "ros.route_assigned",
+  "order_id": "ORD-12345678",
+  "driver_id": "DRV-01",
+  "estimated_delivery_time": "2026-03-01T14:00:00Z"
+}
+```
+
+---
+
+# 4. Internal Event Contracts (RabbitMQ)
+
+Exchange:
+
+```
+swifttrack.events
+```
+
+Type:
+
+```
+topic
+```
+
+---
+
+## 4.1 order.created
+
+```json
+{
+  "order_id": "ORD-12345678",
+  "client_id": "CLIENT-01",
+  "pickup_address": "Colombo",
+  "delivery_address": "Kandy",
+  "priority": "NORMAL"
+}
+```
+
+---
+
+## 4.2 cms.confirmed
+
+```json
+{
+  "order_id": "ORD-12345678",
+  "cms_reference_id": "CMS-9991"
+}
+```
+
+---
+
+## 4.3 wms.registered
+
+```json
+{
+  "order_id": "ORD-12345678",
+  "package_id": "PKG-1001",
+  "warehouse_location": "WH-A1"
+}
+```
+
+---
+
+## 4.4 ros.route_assigned
+
+```json
+{
+  "order_id": "ORD-12345678",
+  "driver_id": "DRV-01",
+  "route_id": "R-1001",
+  "estimated_delivery_time": "2026-03-01T14:00:00Z"
+}
+```
+
+---
+
+## 4.5 order.delivered
+
+```json
+{
+  "order_id": "ORD-12345678",
+  "driver_id": "DRV-01",
+  "delivered_at": "2026-03-01T13:45:00Z",
+  "proof_type": "PHOTO",
+  "proof_url": "https://storage.example.com/photo.jpg"
+}
+```
+
+---
+
+# 5. HTTP Status Code Summary
+
+| Code | Meaning                            |
+| ---- | ---------------------------------- |
+| 200  | Success                            |
+| 201  | Created                            |
+| 400  | Validation error                   |
+| 401  | Unauthorized (invalid/missing JWT) |
+| 403  | Forbidden (wrong role)             |
+| 404  | Not found                          |
+| 409  | Conflict                           |
+
+---
+
+# 6. Security Model Summary
+
+* JWT Authentication (HS256)
+* Role-Based Access Control
+* Passwords hashed with bcrypt
+* Stateless validation in services
+* Protected endpoints enforce role checks
+
+---
+
+If needed, I can also provide:
+
+* OpenAPI YAML specification
+* Swagger-ready JSON
+* Postman collection export
+* Curl test commands for demo
+* Sequence diagram for API interactions

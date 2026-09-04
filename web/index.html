@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SwiftTrack</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+ <link rel="stylesheet" href="main.css">
+</head>
+
+<body>
+  <div id="toast-container"></div>
+
+  <!-- ────────────────── LOGIN ────────────────── -->
+  <div id="login-screen" class="screen">
+    <div class="login-wrap">
+      <div class="login-logo">
+        <div class="login-mark">⚡</div>
+        <div class="login-name">Swift<span>Track</span></div>
+      </div>
+      <div class="login-card">
+        <div class="login-title">Sign in</div>
+        <div class="login-sub">Client portal &amp; driver dashboard</div>
+
+        <div class="role-tabs">
+          <button class="role-tab active" id="rtab-CLIENT" onclick="setLoginRole('CLIENT')">📦 Client</button>
+          <button class="role-tab" id="rtab-DRIVER" onclick="setLoginRole('DRIVER')">🚚 Driver</button>
+        </div>
+
+        <div class="field">
+          <label>Username</label>
+          <input id="l-user" type="text" placeholder="Enter username" autocomplete="username">
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input id="l-pass" type="password" placeholder="Enter password" autocomplete="current-password">
+        </div>
+        <button class="btn btn-primary" id="login-btn" onclick="doLogin()">Sign In</button>
+        <div class="login-footer">No account? <span class="lnk" onclick="openModal('reg-modal')">Register here</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ────────────────── REGISTER MODAL ────────────────── -->
+  <div class="modal-bg" id="reg-modal">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="modal-title">Create Account</div>
+        <button class="modal-close" onclick="closeModal('reg-modal')">✕</button>
+      </div>
+      <div class="field"><label>Username</label><input id="r-user" type="text" placeholder="Choose a username"></div>
+      <div class="field"><label>Email</label><input id="r-email" type="email" placeholder="you@example.com"></div>
+      <div class="field"><label>Password</label><input id="r-pass" type="password" placeholder="Password"></div>
+      <div class="field">
+        <label>Role</label>
+        <select id="r-role">
+          <option value="CLIENT">Client — submit & track orders</option>
+          <option value="DRIVER">Driver — manage deliveries</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" id="reg-btn" onclick="doRegister()">Create Account</button>
+    </div>
+  </div>
+
+  <!-- ────────────────── APP ────────────────── -->
+  <div id="app-screen" class="screen">
+    <nav class="nav">
+      <div class="nav-brand">Swift<span>Track</span></div>
+      <span class="nav-badge" id="nav-badge"></span>
+      <div class="nav-sp"></div>
+      <div class="ws-dot" id="ws-dot" title="Live notification status"></div>
+      <div class="nav-user">
+        <div class="nav-av" id="nav-av"></div>
+        <span id="nav-username"></span>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="doLogout()">Sign out</button>
+    </nav>
+
+    <!-- CLIENT VIEW -->
+    <div id="client-view" class="hide">
+      <div class="app-body">
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-label">Total Orders</div>
+            <div class="stat-value" id="s-total">—</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">In Progress</div>
+            <div class="stat-value" id="s-active" style="color:var(--accent)">—</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Delivered</div>
+            <div class="stat-value" id="s-done" style="color:var(--green)">—</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Failed</div>
+            <div class="stat-value" id="s-fail" style="color:var(--red)">—</div>
+          </div>
+        </div>
+
+        <div class="tabs">
+          <button class="tab active" onclick="cTab('orders',this)">My Orders</button>
+          <button class="tab" onclick="cTab('new',this)">+ New Order</button>
+          <button class="tab" onclick="cTab('notifs',this)">Notifications <span class="notif-count"
+              id="notif-badge">0</span></button>
+        </div>
+
+        <div id="tp-orders" class="tab-panel active">
+          <div class="card">
+            <div class="card-head">
+              <div class="card-title">My Orders</div>
+              <button class="btn btn-ghost btn-sm" onclick="loadOrders()">↻ Refresh</button>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Order ID</th>
+                    <th>Destination</th>
+                    <th>Description</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="orders-body">
+                  <tr>
+                    <td colspan="5">
+                      <div class="empty">
+                        <div class="empty-icon">📦</div>Loading…
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div id="tp-new" class="tab-panel">
+          <div class="card">
+            <div class="card-head">
+              <div class="card-title">Submit New Order</div>
+            </div>
+            <div class="card-body">
+              <div class="order-grid">
+                <div class="field"><label>Destination Address</label><input id="o-dest" type="text"
+                    placeholder="e.g. 123 Main St, Colombo"></div>
+                <div class="field"><label>Package Description</label><input id="o-desc" type="text"
+                    placeholder="e.g. Electronics shipment"></div>
+              </div>
+              <button class="btn btn-primary" style="width:auto;margin-top:6px" id="submit-btn"
+                onclick="submitOrder()">Submit Order</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="tp-notifs" class="tab-panel">
+          <div class="card">
+            <div class="card-head">
+              <div class="card-title">Real-time Notifications</div>
+              <span id="ws-status" style="font-size:12px;color:var(--text2)">Connecting…</span>
+            </div>
+            <div class="card-body">
+              <div id="client-notifs" class="notif-list">
+                <div class="notif-empty">Events from the order pipeline will appear here in real-time via WebSocket.
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DRIVER VIEW -->
+    <div id="driver-view" class="hide">
+      <div class="app-body">
+        <div class="stats">
+          <div class="stat">
+            <div class="stat-label">Assigned</div>
+            <div class="stat-value" id="d-total">—</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Delivered</div>
+            <div class="stat-value" id="d-done" style="color:var(--green)">—</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Remaining</div>
+            <div class="stat-value" id="d-rem" style="color:var(--accent)">—</div>
+          </div>
+          <div class="stat">
+            <div class="stat-label">Failed</div>
+            <div class="stat-value" id="d-fail" style="color:var(--red)">—</div>
+          </div>
+        </div>
+
+        <div class="driver-grid">
+          <div>
+            <div class="sec-head">
+              <div class="sec-title">Delivery Manifest</div>
+              <button class="btn btn-ghost btn-sm" onclick="loadOrders()">↻ Refresh</button>
+            </div>
+            <div class="dlv-list" id="dlv-list">
+              <div style="color:var(--text3);font-size:13px;padding:12px 0">No deliveries loaded. Orders will appear
+                here automatically when routes are assigned, or use the lookup below.</div>
+            </div>
+          </div>
+
+          <div class="sidebar">
+            <div class="scard">
+              <div class="scard-title"><span class="live-dot"></span> Live Alerts</div>
+              <div id="drv-alerts">
+                <div class="notif-empty" style="font-size:12px">Real-time route &amp; priority alerts appear here.</div>
+              </div>
+            </div>
+
+            <div class="scard">
+              <div class="scard-title">Order Lookup</div>
+              <div class="field" style="margin-bottom:8px">
+                <label>Order ID</label>
+                <input id="drv-lookup" type="text" placeholder="Paste order UUID to load it">
+              </div>
+              <button class="btn btn-ghost btn-sm" style="width:100%" onclick="driverLookup()">Fetch &amp; Add to
+                Manifest</button>
+            </div>
+
+            <div class="scard">
+              <div class="scard-title">Recent Events</div>
+              <div id="drv-notifs" class="notif-list" style="max-height:260px;overflow-y:auto">
+                <div class="notif-empty" style="font-size:12px">No events yet.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRACKING MODAL -->
+  <div class="modal-bg" id="track-modal">
+    <div class="modal" style="max-width:460px">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title" id="track-title">Order Tracking</div>
+          <div class="modal-sub" id="track-sub"></div>
+        </div>
+        <button class="modal-close" onclick="closeModal('track-modal')">✕</button>
+      </div>
+      <div class="timeline" id="track-tl"></div>
+      <div style="margin-top:20px;text-align:right">
+        <button class="btn btn-ghost btn-sm" onclick="closeModal('track-modal')">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- POD MODAL -->
+  <div class="modal-bg" id="pod-modal">
+    <div class="modal">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title">Proof of Delivery</div>
+          <div class="modal-sub" id="pod-sub"></div>
+        </div>
+        <button class="modal-close" onclick="closeModal('pod-modal')">✕</button>
+      </div>
+      <!-- <div class="field"><label>Recipient Name</label><input id="pod-name" type="text"
+          placeholder="Person who received the package"></div> -->
+      <div class="field">
+        <label>Digital Signature</label>
+        <!-- handlesigupload should upload the image to a hosting service and get the url and set it as that hidden inputs value-->
+          <input type="file" accept="image/*" id="sig-input" onchange="handleSigUpload(event)">
+          <input type="hidden" id="sig-url" value="">
+      </div>
+      <div class="field">
+        <label>Proof of Delivery Image</label>
+          <input type="file" accept="image/*" id="pod-image-input" onchange="handlePodImageUpload(event)">
+          <input type="hidden" id="pod-image-url" value="">
+      </div>
+    
+        <button class="btn btn-ghost" onclick="closeModal('pod-modal')">Cancel</button>
+        <button class="btn btn-green" id="pod-btn" onclick="confirmDeliver()">✓ Confirm Delivered</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FAIL MODAL -->
+  <div class="modal-bg" id="fail-modal">
+    <div class="modal">
+      <div class="modal-head">
+        <div>
+          <div class="modal-title">Mark Delivery Failed</div>
+          <div class="modal-sub" id="fail-sub"></div>
+        </div>
+        <button class="modal-close" onclick="closeModal('fail-modal')">✕</button>
+      </div>
+      <div class="field">
+        <label>Failure Reason</label>
+        <select id="fail-reason">
+          <option>Recipient not available</option>
+          <option>Incorrect address</option>
+          <option>Access denied to building</option>
+          <option>Package refused by recipient</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" onclick="closeModal('fail-modal')">Cancel</button>
+        <button class="btn btn-red" id="fail-btn" onclick="confirmFail()">Mark as Failed</button>
+      </div>
+    </div>
+  </div>
+ 
+ <script src="main.js"></script>
+</body>
+
+</html>
