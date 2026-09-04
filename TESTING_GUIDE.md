@@ -1,6 +1,6 @@
 # SwiftTrack System Testing & Execution Guide
 
-This document contains all the necessary instructions to set up the environment and test the SwiftTrack platform. We provide instructions for testing via the **built-in Web UI** (easiest for visual demonstration) and via **API / Postman**.
+This document contains all the necessary instructions to set up the environment and test the SwiftTrack platform. We provide instructions for testing via the **built-in Web UI** (easiest for visual demonstration) and via **API / Postman** which is an industry standard.
 
 ---
 
