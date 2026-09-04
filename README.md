@@ -12,7 +12,7 @@ SwiftTrack is a robust, highly scalable middleware architecture prototype design
 
 This repository is built as a showcase of advanced distributed systems engineering. It emphasizes fault tolerance, asynchronous processing, and architectural decoupling, making it an ideal reference for enterprise-grade microservice design.
 
-![SwiftTrack Architecture Diagram](SwiftTrack%20Arch%20Diagram.png)
+![SwiftTrack Architecture Diagram](Assests/SwiftTrack%20Arch%20Diagram.png)
 
 ---
 
@@ -96,8 +96,8 @@ If the `cms-adapter` receives a failure from the Legacy CMS (e.g. customer accou
 
 Want to see SwiftTrack in action? Setting up the entire distributed ecosystem takes just one command. Please refer to the execution guide to spin up the cluster and test the Web UI, API, and failure scenarios.
 
-👉 **[View the Testing & Execution Guide (TESTING_GUIDE.md)](TESTING_GUIDE.md)**
+👉 **[View the Testing & Execution Guide (TESTING GUIDE)](TESTING_GUIDE.md)**
 
 ---
 
-*Built to demonstrate industry-standard software architecture and distributed integration patterns.*
+Built to demonstrate industry-standard software architecture and distributed integration patterns.
